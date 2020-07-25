@@ -14,14 +14,12 @@
 #define dirB 8
 #define stepC 9
 #define dirC 10
-#define buttonPin 12
 
 // objects
 Servo servo;
 AccelStepper stepperA(AccelStepper::DRIVER, stepA, dirA);
 
 // state
-int ledOnOff = 0;
 int pulseLength = 1500; // delay: 500 too short, 1000 ok
 int direction = 0;
 long numSteps = 200;
@@ -30,20 +28,12 @@ int abc = 1;
 int motorsOff = 0;
 
 // limit switches
-const byte interruptPin = 13;
-volatile byte intstate = LOW;
+const byte interruptPin = 14;
 
-void stopMotor();
-
-void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
-  
+void setup() {  
   // steppers
   pinMode(stepEnable, OUTPUT);
   digitalWrite(stepEnable, LOW);  
-  //pinMode(servoPin, OUTPUT);
-  //digitalWrite(dirPin, LOW);
 
   //pinMode(stepA, OUTPUT);
   pinMode(stepB, OUTPUT);
@@ -52,13 +42,12 @@ void setup() {
   pinMode(dirB, OUTPUT);
   pinMode(dirC, OUTPUT);
 
-  stepperA.setAcceleration(100.0);
-  stepperA.setMaxSpeed(100); // steps per sec 
-  stepperA.moveTo(200);
+  stepperA.setAcceleration(400.0);
+  stepperA.setMaxSpeed(1000); // steps per sec 
+  //stepperA.moveTo(300);
 
   // limit switches
   pinMode(interruptPin, INPUT_PULLUP);
-  //attachInterrupt(digitalPinToInterrupt(interruptPin), stopMotor, CHANGE); // interruts only on pin 1 and 2
 
   servo.attach(servoPin, 1000, 2000);
 
@@ -66,40 +55,6 @@ void setup() {
   Serial.println("Press button to advance stepper.");
   Serial.println("  D: direction, 1-9: Num Rotations");
   Serial.println("  S: Slower, F: Faster");
-
-  // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT_PULLUP);
-
-  // flash
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);                       // wait for a second
-}
-
-
-void debugSingleStep() {
-  while (digitalRead(buttonPin));  // wait here while button is not pressed
-  delay(10);  // debounce button press
-  while (!digitalRead(buttonPin));  // wait here while button is pressed
-  
-  // step pulse
-  digitalWrite(stepA, HIGH);
-  //delayMicroseconds(10);
-  delay(100);// 1 sec for debug!!!!!!!!!!!!!!!!!!!!!!!!!!
-  digitalWrite(stepA, LOW);
-
-  // toggle led
-  digitalWrite(LED_BUILTIN, ledOnOff);
-  ledOnOff = ledOnOff ^ 1;
-  Serial.print("Step. ");
-}
-
-
-void buttonWait() {
-  while (digitalRead(buttonPin));  // wait here while button +is not pressed
-  delay(10);  // debounce button press
-  while (!digitalRead(buttonPin));  // wait here while button is pressed
 }
 
 void servoTest() {
@@ -122,15 +77,6 @@ void servoTest() {
   
   servo.write(90);                                 //move servo to 180 deg
   delay(500);                                           //wait for 500ms  
-  
-  // servo.write(120);                                 //move servo to 120 deg
-  // delay(500);                                           //wait for 500ms  
-  
-  // servo.write(60);                                  //move servo to 60 deg
-  // delay(500);                                           //wait for 500ms      
-  
-  // servo.write(0);                                   //move servo to 0 deg
-  // delay(500);                                           //wait for 500ms 
 }
 
 void handleCommand() {
@@ -189,16 +135,29 @@ void handleCommand() {
 }
 
 void loop() {
-  // buttonWait();
-  handleCommand();
   
+  //stepperA.run();
+  // stepperA.runToPosition();
+
+  // delay(300);
+  stepperA.moveTo(400);
+  stepperA.runToPosition();
+  delay(600);
+  stepperA.setAcceleration(1000);
+  stepperA.setMaxSpeed(2400);
+  stepperA.moveTo(-400);
+  stepperA.runToPosition();
+
+  handleCommand();
+
   for(int x = 0; x < numSteps; x++) {
-    if (digitalRead(intstate) == LOW) {
+    Serial.print(digitalRead(interruptPin));
+
+    if (digitalRead(interruptPin) == LOW) {
+      // stepperA.stop();
       Serial.println("HOMING STOP!");
-      stepperA.stop();
-      break; // stop moror spinning - homing switch triggered
-    }
-    stepperA.run();
+      // break; // stop moror spinning - homing switch triggered
+    }    
 
     // step pulse
     //if (abc & 1)
@@ -219,10 +178,6 @@ void loop() {
 
     delayMicroseconds(pulseLength);
   }
-
-  // toggle led
-  digitalWrite(LED_BUILTIN, ledOnOff);
-  ledOnOff = ledOnOff ^ 1;
+  
   Serial.print(".");
-
 }

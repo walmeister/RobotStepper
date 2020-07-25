@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Servo.h>
-//#include <AccelStepper.h>
+#include <AccelStepper.h>
 
 
 // Defines pins numbers
@@ -18,6 +18,7 @@
 
 // objects
 Servo servo;
+AccelStepper stepperA(AccelStepper::DRIVER, stepA, dirA);
 
 // state
 int ledOnOff = 0;
@@ -44,16 +45,20 @@ void setup() {
   //pinMode(servoPin, OUTPUT);
   //digitalWrite(dirPin, LOW);
 
-  pinMode(stepA, OUTPUT);
+  //pinMode(stepA, OUTPUT);
   pinMode(stepB, OUTPUT);
   pinMode(stepC, OUTPUT);
-  pinMode(dirA, OUTPUT);
+  //pinMode(dirA, OUTPUT);
   pinMode(dirB, OUTPUT);
   pinMode(dirC, OUTPUT);
 
+  stepperA.setAcceleration(100.0);
+  stepperA.setMaxSpeed(100); // steps per sec 
+  stepperA.moveTo(200);
+
   // limit switches
   pinMode(interruptPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptPin), stopMotor, CHANGE);
+  //attachInterrupt(digitalPinToInterrupt(interruptPin), stopMotor, CHANGE); // interruts only on pin 1 and 2
 
   servo.attach(servoPin, 1000, 2000);
 
@@ -72,9 +77,6 @@ void setup() {
   delay(1000);                       // wait for a second
 }
 
-void stopMotor() {
-  intstate = !intstate;
-}
 
 void debugSingleStep() {
   while (digitalRead(buttonPin));  // wait here while button is not pressed
@@ -151,7 +153,7 @@ void handleCommand() {
     direction = direction ^ 1;
     Serial.print("Direction: ");
     Serial.println(direction);
-    digitalWrite(dirA, direction);
+    //digitalWrite(dirA, direction);
     digitalWrite(dirB, direction);
     digitalWrite(dirC, direction);
   }
@@ -191,14 +193,16 @@ void loop() {
   handleCommand();
   
   for(int x = 0; x < numSteps; x++) {
-    if (intstate == HIGH) {
+    if (digitalRead(intstate) == LOW) {
       Serial.println("HOMING STOP!");
+      stepperA.stop();
       break; // stop moror spinning - homing switch triggered
     }
+    stepperA.run();
 
     // step pulse
-    if (abc & 1)
-      digitalWrite(stepA, HIGH); 
+    //if (abc & 1)
+    //   digitalWrite(stepA, HIGH); 
     if (abc & 2)
       digitalWrite(stepB, HIGH); 
     if (abc & 4)
@@ -206,8 +210,8 @@ void loop() {
 
     delayMicroseconds(pulseLength); // 500 is too fast    
 
-    if (abc & 1)
-      digitalWrite(stepA, LOW); 
+    // if (abc & 1)
+    //   digitalWrite(stepA, LOW); 
     if (abc & 2)
       digitalWrite(stepB, LOW); 
     if (abc & 4)

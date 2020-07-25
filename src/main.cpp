@@ -18,6 +18,8 @@
 // objects
 Servo servo;
 AccelStepper stepperA(AccelStepper::DRIVER, stepA, dirA);
+AccelStepper stepperB(AccelStepper::DRIVER, stepB, dirB);
+//AccelStepper stepperC(AccelStepper::DRIVER, stepC, dirC);
 
 // state
 int pulseLength = 1500; // delay: 500 too short, 1000 ok
@@ -26,9 +28,13 @@ long numSteps = 200;
 int servoAngle = 0;     //servo angle which can vary from 0 - 180
 int abc = 1;
 int motorsOff = 0;
+int posA = 0;
+int posB = 0;
 
 // limit switches
 const byte interruptPin = 14;
+
+void homeA();
 
 void setup() {  
   // steppers
@@ -36,14 +42,17 @@ void setup() {
   digitalWrite(stepEnable, LOW);  
 
   //pinMode(stepA, OUTPUT);
-  pinMode(stepB, OUTPUT);
+  //pinMode(stepB, OUTPUT);
   pinMode(stepC, OUTPUT);
   //pinMode(dirA, OUTPUT);
-  pinMode(dirB, OUTPUT);
+  //pinMode(dirB, OUTPUT);
   pinMode(dirC, OUTPUT);
 
   stepperA.setAcceleration(400.0);
   stepperA.setMaxSpeed(1000); // steps per sec 
+  stepperB.setAcceleration(400.0);
+  stepperB.setMaxSpeed(1000);
+
   //stepperA.moveTo(300);
 
   // limit switches
@@ -55,6 +64,29 @@ void setup() {
   Serial.println("Press button to advance stepper.");
   Serial.println("  D: direction, 1-9: Num Rotations");
   Serial.println("  S: Slower, F: Faster");
+
+  homeA();
+  stepperA.setAcceleration(1000);
+  stepperA.setMaxSpeed(2400);
+  stepperB.setAcceleration(1000);
+  stepperB.setMaxSpeed(2400);
+}
+
+void homeA()
+{
+  Serial.println("Homing...");
+  stepperA.setAcceleration(100.0);
+  stepperA.setMaxSpeed(300);
+  stepperA.moveTo(2000); // should be more than max travel
+  // TODO: need timeout
+  while (digitalRead(interruptPin))
+  {
+    stepperA.run();
+  }
+  stepperA.stop();
+  posA = 0;
+  
+  Serial.println("Homing done");
 }
 
 void servoTest() {
@@ -95,12 +127,31 @@ void handleCommand() {
   }
   Serial.print("ABC: "); Serial.println(abc);
 
+  // left, right = h k
+  if ( c == 'h') {
+    posA += 300;
+    stepperA.moveTo(posA);  
+  }
+  if ( c == 'k') {
+    posA -= 300;
+    stepperA.moveTo(posA);  
+  }
+  // up, down: u, j
+  if ( c == 'u') {
+    posB += 200;
+    stepperB.moveTo(posB);  
+  }
+  if ( c == 'j') {
+    posB -= 200;
+    stepperB.moveTo(posB);  
+  }
+
   if ( c == 'd' ) {
     direction = direction ^ 1;
     Serial.print("Direction: ");
     Serial.println(direction);
     //digitalWrite(dirA, direction);
-    digitalWrite(dirB, direction);
+    //digitalWrite(dirB, direction);
     digitalWrite(dirC, direction);
   }
 
@@ -136,34 +187,35 @@ void handleCommand() {
 
 void loop() {
   
-  //stepperA.run();
+  // accel test A
+  // stepperA.moveTo(200);
+  // stepperA.runToPosition();
+  // delay(600);
+  // stepperA.setAcceleration(1000);
+  // stepperA.setMaxSpeed(2400);
+  // stepperA.moveTo(-200);
   // stepperA.runToPosition();
 
-  // delay(300);
-  stepperA.moveTo(400);
-  stepperA.runToPosition();
-  delay(600);
-  stepperA.setAcceleration(1000);
-  stepperA.setMaxSpeed(2400);
-  stepperA.moveTo(-400);
-  stepperA.runToPosition();
-
   handleCommand();
+  stepperA.runToPosition();
+  stepperB.runToPosition();
 
   for(int x = 0; x < numSteps; x++) {
-    Serial.print(digitalRead(interruptPin));
+    // stepperA.run();
+    // stepperB.run();
+    //Serial.print(digitalRead(interruptPin));
 
-    if (digitalRead(interruptPin) == LOW) {
-      // stepperA.stop();
-      Serial.println("HOMING STOP!");
-      // break; // stop moror spinning - homing switch triggered
-    }    
+    // if (digitalRead(interruptPin) == LOW) {
+    //   // stepperA.stop();
+    //   Serial.println("HOMING STOP!");
+    //   // break; // stop moror spinning - homing switch triggered
+    // }    
 
     // step pulse
     //if (abc & 1)
     //   digitalWrite(stepA, HIGH); 
-    if (abc & 2)
-      digitalWrite(stepB, HIGH); 
+    // if (abc & 2)
+    //   digitalWrite(stepB, HIGH); 
     if (abc & 4)
       digitalWrite(stepC, HIGH);
 
@@ -171,8 +223,8 @@ void loop() {
 
     // if (abc & 1)
     //   digitalWrite(stepA, LOW); 
-    if (abc & 2)
-      digitalWrite(stepB, LOW); 
+    // if (abc & 2)
+    //   digitalWrite(stepB, LOW); 
     if (abc & 4)
       digitalWrite(stepC, LOW);
 

@@ -19,7 +19,7 @@
 Servo servo;
 AccelStepper stepperA(AccelStepper::DRIVER, stepA, dirA);
 AccelStepper stepperB(AccelStepper::DRIVER, stepB, dirB);
-//AccelStepper stepperC(AccelStepper::DRIVER, stepC, dirC);
+AccelStepper stepperC(AccelStepper::DRIVER, stepC, dirC);
 
 // state
 int pulseLength = 1500; // delay: 500 too short, 1000 ok
@@ -30,6 +30,7 @@ int abc = 1;
 int motorsOff = 0;
 int posA = 0;
 int posB = 0;
+int posC = 0;
 
 // limit switches
 const byte interruptPin = 14;
@@ -41,19 +42,12 @@ void setup() {
   pinMode(stepEnable, OUTPUT);
   digitalWrite(stepEnable, LOW);  
 
-  //pinMode(stepA, OUTPUT);
-  //pinMode(stepB, OUTPUT);
-  pinMode(stepC, OUTPUT);
-  //pinMode(dirA, OUTPUT);
-  //pinMode(dirB, OUTPUT);
-  pinMode(dirC, OUTPUT);
-
   stepperA.setAcceleration(400.0);
   stepperA.setMaxSpeed(1000); // steps per sec 
   stepperB.setAcceleration(400.0);
   stepperB.setMaxSpeed(1000);
-
-  //stepperA.moveTo(300);
+  stepperC.setAcceleration(400.0);
+  stepperC.setMaxSpeed(1000);
 
   // limit switches
   pinMode(interruptPin, INPUT_PULLUP);
@@ -72,8 +66,7 @@ void setup() {
   stepperB.setMaxSpeed(2400);
 }
 
-void homeA()
-{
+void homeA() {
   Serial.println("Homing...");
   stepperA.setAcceleration(100.0);
   stepperA.setMaxSpeed(300);
@@ -113,7 +106,10 @@ void servoTest() {
 
 void handleCommand() {
 
-  while (!Serial.available()) { ; }
+  if (!Serial.available()) { 
+    return;
+  }
+
   byte c = Serial.read();
 
   if ( c == 'a' ) {
@@ -144,15 +140,6 @@ void handleCommand() {
   if ( c == 'j') {
     posB -= 200;
     stepperB.moveTo(posB);  
-  }
-
-  if ( c == 'd' ) {
-    direction = direction ^ 1;
-    Serial.print("Direction: ");
-    Serial.println(direction);
-    //digitalWrite(dirA, direction);
-    //digitalWrite(dirB, direction);
-    digitalWrite(dirC, direction);
   }
 
   if ( c >= '1' && c <= '9') {
@@ -197,39 +184,13 @@ void loop() {
   // stepperA.runToPosition();
 
   handleCommand();
-  stepperA.runToPosition();
-  stepperB.runToPosition();
 
-  for(int x = 0; x < numSteps; x++) {
-    // stepperA.run();
-    // stepperB.run();
-    //Serial.print(digitalRead(interruptPin));
-
-    // if (digitalRead(interruptPin) == LOW) {
-    //   // stepperA.stop();
-    //   Serial.println("HOMING STOP!");
-    //   // break; // stop moror spinning - homing switch triggered
-    // }    
-
-    // step pulse
-    //if (abc & 1)
-    //   digitalWrite(stepA, HIGH); 
-    // if (abc & 2)
-    //   digitalWrite(stepB, HIGH); 
-    if (abc & 4)
-      digitalWrite(stepC, HIGH);
-
-    delayMicroseconds(pulseLength); // 500 is too fast    
-
-    // if (abc & 1)
-    //   digitalWrite(stepA, LOW); 
-    // if (abc & 2)
-    //   digitalWrite(stepB, LOW); 
-    if (abc & 4)
-      digitalWrite(stepC, LOW);
-
-    delayMicroseconds(pulseLength);
-  }
+  stepperA.run();
+  stepperB.run();
+  stepperC.run();
+  //^^^ do we need to use isRunning() and call run for each stepperB
+  
+  // TODO- add homing switches
   
   Serial.print(".");
 }
